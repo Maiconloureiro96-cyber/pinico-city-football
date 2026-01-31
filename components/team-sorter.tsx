@@ -19,6 +19,7 @@ export function TeamSorter() {
   const [numTeams, setNumTeams] = useState(2);
   const [playersPerTeam, setPlayersPerTeam] = useState(5);
   const [teams, setTeams] = useState<Player[][]>([]);
+  const [benchPlayers, setBenchPlayers] = useState<Player[]>([]);
   const [isShuffling, setIsShuffling] = useState(false);
   const [activeTab, setActiveTab] = useState("cadastro");
   const [isLoaded, setIsLoaded] = useState(false);
@@ -74,55 +75,70 @@ export function TeamSorter() {
     // Total de vagas disponíveis (times * jogadores por time)
     const totalSlots = numTeams * playersPerTeam;
     
-    // Ordena jogadores por habilidade (do maior para o menor)
-    const sortedPlayers = [...selectedPlayers].sort((a, b) => b.skill - a.skill);
+    // Embaralha os jogadores aleatoriamente primeiro (Fisher-Yates shuffle)
+    const shuffledPlayers = [...selectedPlayers];
+    for (let i = shuffledPlayers.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffledPlayers[i], shuffledPlayers[j]] = [shuffledPlayers[j], shuffledPlayers[i]];
+    }
     
-    // Pega apenas os jogadores que cabem nos times (excedentes ficam de fora)
-    const playersToDistribute = sortedPlayers.slice(0, totalSlots);
+    // Separa jogadores que vão jogar e os que ficam no banco
+    const playersToDistribute = shuffledPlayers.slice(0, totalSlots);
+    const bench = shuffledPlayers.slice(totalSlots);
+    
+    // Ordena por habilidade para distribuição equilibrada
+    const sortedPlayers = [...playersToDistribute].sort((a, b) => b.skill - a.skill);
 
     // Cria os times vazios
     const newTeams: Player[][] = Array.from({ length: numTeams }, () => []);
     const teamSkills: number[] = Array(numTeams).fill(0);
 
-    // Distribui jogadores usando algoritmo equilibrado
-    playersToDistribute.forEach((player) => {
+    // Distribui jogadores usando algoritmo equilibrado (snake draft)
+    sortedPlayers.forEach((player) => {
       // Encontra o time com menor pontuação total que ainda tem vaga
       let targetTeamIndex = 0;
       let minSkill = Infinity;
+      let minPlayers = Infinity;
 
       for (let i = 0; i < numTeams; i++) {
-        if (newTeams[i].length < playersPerTeam && teamSkills[i] < minSkill) {
-          minSkill = teamSkills[i];
-          targetTeamIndex = i;
+        // Prioriza times com menos jogadores, depois menor pontuação
+        if (newTeams[i].length < playersPerTeam) {
+          if (newTeams[i].length < minPlayers || 
+              (newTeams[i].length === minPlayers && teamSkills[i] < minSkill)) {
+            minPlayers = newTeams[i].length;
+            minSkill = teamSkills[i];
+            targetTeamIndex = i;
+          }
         }
       }
 
       // Adiciona o jogador ao time
-      if (newTeams[targetTeamIndex].length < playersPerTeam) {
-        newTeams[targetTeamIndex].push(player);
-        teamSkills[targetTeamIndex] += player.skill;
-      }
+      newTeams[targetTeamIndex].push(player);
+      teamSkills[targetTeamIndex] += player.skill;
     });
 
-    return newTeams;
+    return { teams: newTeams, bench };
   };
 
   const handleShuffle = async () => {
     setIsShuffling(true);
     await new Promise((resolve) => setTimeout(resolve, 500));
-    const newTeams = balancedShuffle();
-    setTeams(newTeams);
+    const result = balancedShuffle();
+    setTeams(result.teams);
+    setBenchPlayers(result.bench);
     setIsShuffling(false);
   };
 
   const handleReset = () => {
     setTeams([]);
+    setBenchPlayers([]);
   };
 
   const handleClearAll = () => {
     setPlayers([]);
     setSelectedIds([]);
     setTeams([]);
+    setBenchPlayers([]);
   };
 
   const totalSlots = numTeams * playersPerTeam;
@@ -367,6 +383,33 @@ export function TeamSorter() {
                     </div>
                   </CardContent>
                 </Card>
+
+                {/* Jogadores no Banco */}
+                {benchPlayers.length > 0 && (
+                  <Card className="border-amber-500/50 bg-amber-500/10">
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-lg flex items-center gap-2 text-amber-500">
+                        <Users className="w-5 h-5" />
+                        No Banco ({benchPlayers.length} jogador{benchPlayers.length > 1 ? 'es' : ''})
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="flex flex-wrap gap-2">
+                        {benchPlayers.map((player) => (
+                          <div
+                            key={player.id}
+                            className="flex items-center gap-2 bg-amber-500/20 px-3 py-2 rounded-lg"
+                          >
+                            <span className="font-medium">{player.name}</span>
+                            <span className="text-amber-400 text-sm">
+                              {"★".repeat(player.skill)}{"☆".repeat(3 - player.skill)}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
               </div>
             )}
           </TabsContent>
