@@ -70,43 +70,35 @@ export function TeamSorter() {
 
   const balancedShuffle = () => {
     const selectedPlayers = players.filter((p) => selectedIds.includes(p.id));
-    const totalPlayers = selectedPlayers.length;
     
-    // Calcula quantos times completos teremos e quantos jogadores sobram
-    const fullTeams = Math.floor(totalPlayers / playersPerTeam);
-    const remainingPlayers = totalPlayers % playersPerTeam;
-    
-    // Determina quantos times vamos criar (times completos + 1 se houver resto)
-    const actualTeams = remainingPlayers > 0 ? Math.min(fullTeams + 1, numTeams) : Math.min(fullTeams, numTeams);
+    // Total de vagas disponíveis (times * jogadores por time)
+    const totalSlots = numTeams * playersPerTeam;
     
     // Ordena jogadores por habilidade (do maior para o menor)
     const sortedPlayers = [...selectedPlayers].sort((a, b) => b.skill - a.skill);
+    
+    // Pega apenas os jogadores que cabem nos times (excedentes ficam de fora)
+    const playersToDistribute = sortedPlayers.slice(0, totalSlots);
 
     // Cria os times vazios
-    const newTeams: Player[][] = Array.from({ length: actualTeams }, () => []);
-    const teamSkills: number[] = Array(actualTeams).fill(0);
+    const newTeams: Player[][] = Array.from({ length: numTeams }, () => []);
+    const teamSkills: number[] = Array(numTeams).fill(0);
 
     // Distribui jogadores usando algoritmo equilibrado
-    // Preenche os times completos primeiro, depois o último com o restante
-    sortedPlayers.forEach((player) => {
+    playersToDistribute.forEach((player) => {
       // Encontra o time com menor pontuação total que ainda tem vaga
-      let targetTeamIndex = -1;
+      let targetTeamIndex = 0;
       let minSkill = Infinity;
 
-      for (let i = 0; i < actualTeams; i++) {
-        // Para os primeiros times (completos), limite é playersPerTeam
-        // Para o último time (se houver resto), aceita os jogadores restantes
-        const isLastTeam = i === actualTeams - 1 && remainingPlayers > 0;
-        const maxPlayers = isLastTeam ? remainingPlayers : playersPerTeam;
-        
-        if (newTeams[i].length < maxPlayers && teamSkills[i] < minSkill) {
+      for (let i = 0; i < numTeams; i++) {
+        if (newTeams[i].length < playersPerTeam && teamSkills[i] < minSkill) {
           minSkill = teamSkills[i];
           targetTeamIndex = i;
         }
       }
 
-      // Se encontrou um time com vaga, adiciona o jogador
-      if (targetTeamIndex !== -1) {
+      // Adiciona o jogador ao time
+      if (newTeams[targetTeamIndex].length < playersPerTeam) {
         newTeams[targetTeamIndex].push(player);
         teamSkills[targetTeamIndex] += player.skill;
       }
@@ -134,12 +126,12 @@ export function TeamSorter() {
   };
 
   const totalSlots = numTeams * playersPerTeam;
-  const canShuffle = selectedIds.length >= 2; // Mínimo 2 jogadores para sortear
+  const canShuffle = selectedIds.length >= numTeams; // Mínimo 1 jogador por time
   
-  // Calcula a distribuição dos jogadores
-  const fullTeamsCount = Math.min(Math.floor(selectedIds.length / playersPerTeam), numTeams);
-  const remainingPlayersCount = selectedIds.length - (fullTeamsCount * playersPerTeam);
-  const hasIncompleteTeam = remainingPlayersCount > 0 && fullTeamsCount < numTeams;
+  // Calcula quantos jogadores vão jogar e quantos ficam de fora
+  const playersInGame = Math.min(selectedIds.length, totalSlots);
+  const playersOut = Math.max(0, selectedIds.length - totalSlots);
+  const teamsComplete = selectedIds.length >= totalSlots;
 
   if (!isLoaded) {
     return (
@@ -241,18 +233,27 @@ export function TeamSorter() {
                 />
                 <div className="text-sm text-muted-foreground mt-3 space-y-1">
                   <p>
+                    Vagas: <span className="font-medium text-foreground">{totalSlots}</span> ({numTeams} times x {playersPerTeam} jogadores)
+                  </p>
+                  <p>
                     Selecionados:{" "}
                     <span className="font-medium text-foreground">{selectedIds.length}</span> jogadores
                   </p>
-                  {selectedIds.length >= 2 && (
-                    <p className="text-cyan-400">
-                      {fullTeamsCount > 0 && (
-                        <span>{fullTeamsCount} time{fullTeamsCount > 1 ? 's' : ''} completo{fullTeamsCount > 1 ? 's' : ''} ({playersPerTeam} jogadores)</span>
+                  {selectedIds.length > 0 && (
+                    <>
+                      {teamsComplete ? (
+                        <p className="text-green-400">
+                          {numTeams} times completos
+                          {playersOut > 0 && (
+                            <span className="text-amber-400"> ({playersOut} no banco)</span>
+                          )}
+                        </p>
+                      ) : (
+                        <p className="text-amber-400">
+                          Faltam {totalSlots - selectedIds.length} jogadores para completar os times
+                        </p>
                       )}
-                      {hasIncompleteTeam && (
-                        <span>{fullTeamsCount > 0 ? ' + ' : ''} 1 time com {remainingPlayersCount} jogador{remainingPlayersCount > 1 ? 'es' : ''}</span>
-                      )}
-                    </p>
+                    </>
                   )}
                 </div>
               </CardContent>
@@ -320,9 +321,9 @@ export function TeamSorter() {
               )}
             </div>
 
-            {!canShuffle && selectedIds.length > 0 && selectedIds.length < 2 && (
+            {!canShuffle && selectedIds.length > 0 && (
               <p className="text-center text-amber-500 text-sm">
-                Selecione pelo menos 2 jogadores para sortear
+                Selecione pelo menos {numTeams} jogadores (1 por time) para sortear
               </p>
             )}
 
