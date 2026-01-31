@@ -11,6 +11,7 @@ import { TeamCard } from "@/components/team-card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const STORAGE_KEY = "pinico-city-players";
+const BASE_PATH = process.env.NODE_ENV === 'production' ? '/pinico-city-football' : '';
 
 export function TeamSorter() {
   const [players, setPlayers] = useState<Player[]>([]);
@@ -135,7 +136,7 @@ export function TeamSorter() {
         <div className="container mx-auto px-4 py-6">
           <div className="flex flex-col items-center text-center">
             <img
-              src="/logo-pinico-city.png"
+              src={`${BASE_PATH}/logo-pinico-city.png`}
               alt="Pinico City FC"
               className="w-28 h-28 sm:w-36 sm:h-36 object-contain drop-shadow-lg mb-3"
             />
@@ -355,7 +356,7 @@ export function TeamSorter() {
       <footer className="border-t border-border mt-8 py-6 text-center text-sm text-muted-foreground">
         <div className="flex flex-col items-center gap-2">
           <img
-            src="/logo-pinico-city.png"
+            src={`${BASE_PATH}/logo-pinico-city.png`}
             alt="Pinico City FC"
             className="w-10 h-10 object-contain opacity-70"
           />
