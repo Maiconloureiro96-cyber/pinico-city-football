@@ -23,34 +23,71 @@ export function MatchTimer() {
   const [isFinished, setIsFinished] = useState(false);
   const [soundEnabled, setSoundEnabled] = useState(true);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
-  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const alarmIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const audioContextRef = useRef<AudioContext | null>(null);
 
-  // Inicializa o áudio
-  useEffect(() => {
-    audioRef.current = new Audio("data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2teleicAHIa42teleicAHIa42telescAHIa42telescAHIa42telescAHIa42telescAHIa42telescAHIa42telescAHIa42telescAHIa42telescAHIa42telescAHIa42telescAHIa42telescAHIa42telescAHIa42telescAHIa42telescAHIa42telescAHIa42telescAHIa42telescAHIa42telescAHIa42telescAHIa42telescAHIa42telescAHIa42telescAHIa42telescAHIa42telescAHIa42telescAHIa42telescAHIa42telescAHIa42telescAHIa42telescAHIa42telescAHIa42telescAHIa42telescAHIa42telescAHIa42telescAHIa42telescAHIa42telescAHIa42telescAHIa42teleIAA==");
-    return () => {
-      if (audioRef.current) {
-        audioRef.current.pause();
+  // Função para criar beep usando Web Audio API
+  const playBeep = useCallback((frequency: number = 800, duration: number = 200) => {
+    try {
+      if (!audioContextRef.current) {
+        audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
       }
-    };
+      
+      const ctx = audioContextRef.current;
+      const oscillator = ctx.createOscillator();
+      const gainNode = ctx.createGain();
+      
+      oscillator.connect(gainNode);
+      gainNode.connect(ctx.destination);
+      
+      oscillator.frequency.value = frequency;
+      oscillator.type = 'square';
+      
+      gainNode.gain.setValueAtTime(0.3, ctx.currentTime);
+      gainNode.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + duration / 1000);
+      
+      oscillator.start(ctx.currentTime);
+      oscillator.stop(ctx.currentTime + duration / 1000);
+    } catch (e) {
+      console.log('Audio not supported');
+    }
   }, []);
 
-  // Função para tocar o alarme
+  // Função para tocar o alarme (sequência de beeps)
   const playAlarm = useCallback(() => {
-    if (soundEnabled && audioRef.current) {
-      audioRef.current.loop = true;
-      audioRef.current.play().catch(() => {});
-    }
-  }, [soundEnabled]);
+    if (!soundEnabled) return;
+    
+    // Toca uma sequência de beeps
+    const playSequence = () => {
+      playBeep(800, 150);
+      setTimeout(() => playBeep(1000, 150), 200);
+      setTimeout(() => playBeep(800, 150), 400);
+    };
+    
+    // Toca imediatamente
+    playSequence();
+    
+    // Repete a cada 1.5 segundos
+    alarmIntervalRef.current = setInterval(playSequence, 1500);
+  }, [soundEnabled, playBeep]);
 
   // Função para parar o alarme
   const stopAlarm = useCallback(() => {
-    if (audioRef.current) {
-      audioRef.current.pause();
-      audioRef.current.currentTime = 0;
-      audioRef.current.loop = false;
+    if (alarmIntervalRef.current) {
+      clearInterval(alarmIntervalRef.current);
+      alarmIntervalRef.current = null;
     }
   }, []);
+
+  // Cleanup
+  useEffect(() => {
+    return () => {
+      stopAlarm();
+      if (audioContextRef.current) {
+        audioContextRef.current.close();
+      }
+    };
+  }, [stopAlarm]);
 
   // Timer logic
   useEffect(() => {
