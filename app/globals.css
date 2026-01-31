@@ -1,0 +1,55 @@
+@import 'tailwindcss';
+@import 'tw-animate-css';
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --font-sans: 'Geist', 'Geist Fallback';
+  --font-mono: 'Geist Mono', 'Geist Mono Fallback';
+  --radius: 0.75rem;
+  --radius-sm: 0.5rem;
+  --radius-md: 0.625rem;
+  --radius-lg: 0.75rem;
+  --radius-xl: 1rem;
+  --color-background: #1a2744;
+  --color-foreground: #f8fafc;
+  --color-card: #1e3050;
+  --color-card-foreground: #f8fafc;
+  --color-popover: #1e3050;
+  --color-popover-foreground: #f8fafc;
+  --color-primary: #6bb3e0;
+  --color-primary-foreground: #0f1729;
+  --color-secondary: #152238;
+  --color-secondary-foreground: #f8fafc;
+  --color-muted: #243550;
+  --color-muted-foreground: #8fa3c0;
+  --color-accent: #e5b64c;
+  --color-accent-foreground: #0f1729;
+  --color-destructive: #dc2626;
+  --color-destructive-foreground: #f8fafc;
+  --color-border: #2e4567;
+  --color-input: #243550;
+  --color-ring: #6bb3e0;
+  --color-chart-1: #6bb3e0;
+  --color-chart-2: #4a90b8;
+  --color-chart-3: #e5b64c;
+  --color-chart-4: #dc2626;
+  --color-chart-5: #9b5de5;
+  --color-sidebar: #162336;
+  --color-sidebar-foreground: #f8fafc;
+  --color-sidebar-primary: #6bb3e0;
+  --color-sidebar-primary-foreground: #0f1729;
+  --color-sidebar-accent: #243550;
+  --color-sidebar-accent-foreground: #f8fafc;
+  --color-sidebar-border: #2e4567;
+  --color-sidebar-ring: #6bb3e0;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
