@@ -1,17 +1,18 @@
 /** @type {import('next').NextConfig} */
 
-// GitHub Pages (projeto): user.github.io/REPO -> basePath = "/REPO"
-// Workflow define BASE_PATH via actions/configure-pages (output base_path)
+// GitHub Pages: site em subpasta. BASE_PATH vem do workflow (configure-pages).
 const isGithubActions = process.env.GITHUB_ACTIONS === 'true'
 const basePath =
   isGithubActions && process.env.BASE_PATH !== undefined
     ? process.env.BASE_PATH
     : ''
 
+const assetPrefix = basePath === '' ? '' : basePath + '/'
+
 module.exports = {
   output: 'export',
-  basePath,
-  assetPrefix: basePath ? `${basePath}/` : '',
+  basePath: basePath,
+  assetPrefix: assetPrefix,
   env: {
     NEXT_PUBLIC_BASE_PATH: basePath,
   },
