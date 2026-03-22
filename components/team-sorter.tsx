@@ -7,10 +7,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PlayerForm, type Player } from "@/components/player-form";
 import { PlayerImport, type ImportResult } from "@/components/player-import";
 import { PlayerList } from "@/components/player-list";
+import { distributeBalancedTeams } from "@/lib/balance-teams";
 import { orderPlayersForSlotAllocation } from "@/lib/draw-order";
+import { normalizeSkill } from "@/lib/player-skill";
 import { TeamConfig } from "@/components/team-config";
 import { TeamCard } from "@/components/team-card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { SkillStars } from "@/components/skill-stars";
 
 const STORAGE_KEY = "pinico-city-players";
 /** Mesmo basePath do next.config (GitHub Pages em subpasta ou raiz) — exposto via env no build */
@@ -34,7 +37,14 @@ export function TeamSorter() {
     if (stored) {
       try {
         const parsed = JSON.parse(stored);
-        setPlayers(parsed);
+        if (Array.isArray(parsed)) {
+          setPlayers(
+            parsed.map((p) => ({
+              ...p,
+              skill: normalizeSkill(p.skill),
+            })),
+          );
+        }
       } catch (e) {
         console.error("Erro ao carregar jogadores:", e);
       }
@@ -110,37 +120,12 @@ export function TeamSorter() {
 
     const playersToDistribute = orderedForSlots.slice(0, totalSlots);
     const bench = orderedForSlots.slice(totalSlots);
-    
-    // Ordena por habilidade para distribuição equilibrada
-    const sortedPlayers = [...playersToDistribute].sort((a, b) => b.skill - a.skill);
 
-    // Cria os times vazios
-    const newTeams: Player[][] = Array.from({ length: numTeams }, () => []);
-    const teamSkills: number[] = Array(numTeams).fill(0);
-
-    // Distribui jogadores usando algoritmo equilibrado (snake draft)
-    sortedPlayers.forEach((player) => {
-      // Encontra o time com menor pontuação total que ainda tem vaga
-      let targetTeamIndex = 0;
-      let minSkill = Infinity;
-      let minPlayers = Infinity;
-
-      for (let i = 0; i < numTeams; i++) {
-        // Prioriza times com menos jogadores, depois menor pontuação
-        if (newTeams[i].length < playersPerTeam) {
-          if (newTeams[i].length < minPlayers || 
-              (newTeams[i].length === minPlayers && teamSkills[i] < minSkill)) {
-            minPlayers = newTeams[i].length;
-            minSkill = teamSkills[i];
-            targetTeamIndex = i;
-          }
-        }
-      }
-
-      // Adiciona o jogador ao time
-      newTeams[targetTeamIndex].push(player);
-      teamSkills[targetTeamIndex] += player.skill;
-    });
+    const newTeams = distributeBalancedTeams(
+      playersToDistribute,
+      numTeams,
+      playersPerTeam,
+    );
 
     return { teams: newTeams, bench };
   };
@@ -243,7 +228,7 @@ export function TeamSorter() {
               <CardContent className="space-y-4">
                 <PlayerImport
                   existingPlayers={players}
-                  defaultSkill={2}
+                  defaultSkill={3}
                   onImportMerge={handleImportMerge}
                   onImportReplace={handleImportReplace}
                 />
@@ -319,10 +304,11 @@ export function TeamSorter() {
                   Selecionar Jogadores para o Sorteio
                 </CardTitle>
                 <p className="text-sm text-muted-foreground">
-                  Escolha quem vai participar desta pelada. Se você importou uma lista do
-                  WhatsApp, quem está no topo da lista entra em campo antes quando houver
-                  banco; quem foi cadastrado só pelo formulário entra depois, em ordem
-                  aleatória entre si.
+                  Escolha quem vai participar. O sorteio equilibra a{" "}
+                  <span className="text-foreground font-medium">soma das estrelas</span>{" "}
+                  entre os times (quem tem mais estrelas é distribuído para não concentrar
+                  força). Com lista do WhatsApp, quem está no topo entra antes se houver
+                  banco; quem veio só do formulário entra depois, em ordem aleatória.
                 </p>
               </CardHeader>
               <CardContent>
@@ -415,7 +401,7 @@ export function TeamSorter() {
                         return (
                           <div key={index}>
                             <p className="text-sm text-muted-foreground">Time {index + 1}</p>
-                            <p className="text-lg font-bold">{totalSkill} pts</p>
+                            <p className="text-lg font-bold">{totalSkill} estrelas</p>
                           </div>
                         );
                       })}
@@ -440,9 +426,10 @@ export function TeamSorter() {
                             className="flex items-center gap-2 bg-amber-500/20 px-3 py-2 rounded-lg"
                           >
                             <span className="font-medium">{player.name}</span>
-                            <span className="text-amber-400 text-sm">
-                              {"★".repeat(player.skill)}{"☆".repeat(3 - player.skill)}
-                            </span>
+                            <SkillStars
+                              value={player.skill}
+                              starClassName="text-amber-400 fill-amber-400"
+                            />
                           </div>
                         ))}
                       </div>

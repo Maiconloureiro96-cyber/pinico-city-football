@@ -9,7 +9,7 @@ interface StarRatingProps {
   max?: number;
 }
 
-export function StarRating({ value, onChange, max = 3 }: StarRatingProps) {
+export function StarRating({ value, onChange, max = 5 }: StarRatingProps) {
   return (
     <div className="flex gap-1">
       {Array.from({ length: max }, (_, i) => i + 1).map((star) => (

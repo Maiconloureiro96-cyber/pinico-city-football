@@ -1,9 +1,11 @@
 "use client";
 
-import { Star, Users } from "lucide-react";
+import { Users } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { SkillStars } from "@/components/skill-stars";
 import type { Player } from "@/components/player-form";
 import { cn } from "@/lib/utils";
+import { SKILL_MAX } from "@/lib/player-skill";
 
 interface TeamCardProps {
   teamNumber: number;
@@ -36,6 +38,10 @@ const teamTextColors = [
 export function TeamCard({ teamNumber, players, color }: TeamCardProps) {
   const totalSkill = players.reduce((sum, p) => sum + p.skill, 0);
   const avgSkill = players.length > 0 ? totalSkill / players.length : 0;
+  const avgStarsDisplay = Math.min(
+    SKILL_MAX,
+    Math.max(1, Math.round(avgSkill)),
+  );
   const colorIndex = (teamNumber - 1) % teamColors.length;
 
   return (
@@ -54,22 +60,12 @@ export function TeamCard({ teamNumber, players, color }: TeamCardProps) {
             <span>{players.length}</span>
           </div>
         </div>
-        <div className="flex items-center gap-1 text-xs text-muted-foreground">
+        <div className="flex items-center gap-1 text-xs text-muted-foreground flex-wrap">
           <span>Força média:</span>
-          <div className="flex gap-0.5">
-            {Array.from({ length: 3 }, (_, i) => (
-              <Star
-                key={i}
-                className={cn(
-                  "w-3 h-3",
-                  i < Math.round(avgSkill)
-                    ? "fill-accent text-accent"
-                    : "fill-transparent text-muted-foreground"
-                )}
-              />
-            ))}
-          </div>
-          <span className="ml-1">({totalSkill} pts)</span>
+          <SkillStars value={players.length ? avgStarsDisplay : 0} />
+          <span className="ml-1">
+            ({totalSkill} {totalSkill === 1 ? "estrela" : "estrelas"})
+          </span>
         </div>
       </CardHeader>
       <CardContent>
@@ -90,19 +86,7 @@ export function TeamCard({ teamNumber, players, color }: TeamCardProps) {
                   </span>
                   {player.name}
                 </span>
-                <div className="flex gap-0.5">
-                  {Array.from({ length: 3 }, (_, i) => (
-                    <Star
-                      key={i}
-                      className={cn(
-                        "w-3 h-3",
-                        i < player.skill
-                          ? "fill-accent text-accent"
-                          : "fill-transparent text-muted-foreground"
-                      )}
-                    />
-                  ))}
-                </div>
+                <SkillStars value={player.skill} />
               </li>
             ))}
           </ul>

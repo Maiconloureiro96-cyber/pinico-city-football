@@ -1,9 +1,10 @@
 "use client";
 
-import { Star, Trash2, User, Check, ListOrdered } from "lucide-react";
+import { Trash2, User, Check, ListOrdered } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import type { Player } from "@/components/player-form";
+import { SkillStars } from "@/components/skill-stars";
 import { cn } from "@/lib/utils";
 
 interface PlayerListProps {
@@ -108,19 +109,7 @@ export function PlayerList({
                       </span>
                     )}
                   </p>
-                  <div className="flex gap-0.5">
-                    {Array.from({ length: 3 }, (_, i) => (
-                      <Star
-                        key={i}
-                        className={cn(
-                          "w-3 h-3",
-                          i < player.skill
-                            ? "fill-accent text-accent"
-                            : "fill-transparent text-muted-foreground"
-                        )}
-                      />
-                    ))}
-                  </div>
+                  <SkillStars value={player.skill} />
                 </div>
               </div>
               {!selectionMode && (
