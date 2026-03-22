@@ -5,13 +5,16 @@ import { Shuffle, RotateCcw, Users, Star, UserPlus, ListChecks } from "lucide-re
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PlayerForm, type Player } from "@/components/player-form";
+import { PlayerImport, type ImportResult } from "@/components/player-import";
 import { PlayerList } from "@/components/player-list";
+import { orderPlayersForSlotAllocation } from "@/lib/draw-order";
 import { TeamConfig } from "@/components/team-config";
 import { TeamCard } from "@/components/team-card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const STORAGE_KEY = "pinico-city-players";
-const BASE_PATH = process.env.NODE_ENV === 'production' ? '/pinico-city-football' : '';
+/** Mesmo basePath do next.config (GitHub Pages em subpasta ou raiz) — exposto via env no build */
+const BASE_PATH = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
 
 export function TeamSorter() {
   const [players, setPlayers] = useState<Player[]>([]);
@@ -23,6 +26,7 @@ export function TeamSorter() {
   const [isShuffling, setIsShuffling] = useState(false);
   const [activeTab, setActiveTab] = useState("cadastro");
   const [isLoaded, setIsLoaded] = useState(false);
+  const [importFeedback, setImportFeedback] = useState<string | null>(null);
 
   // Carregar jogadores do localStorage
   useEffect(() => {
@@ -46,7 +50,33 @@ export function TeamSorter() {
   }, [players, isLoaded]);
 
   const handleAddPlayer = (player: Player) => {
-    setPlayers((prev) => [...prev, player]);
+    setPlayers((prev) => [...prev, { ...player, listPriority: undefined }]);
+  };
+
+  const handleImportMerge = (result: ImportResult) => {
+    const { added, skippedDuplicates, skippedExisting } = result;
+    setPlayers((prev) => [...prev, ...added]);
+    const parts: string[] = [];
+    if (added.length) parts.push(`${added.length} adicionado(s)`);
+    if (skippedExisting) parts.push(`${skippedExisting} já cadastrado(s)`);
+    if (skippedDuplicates) parts.push(`${skippedDuplicates} repetido(s) na colagem`);
+    if (parts.length === 0) {
+      setImportFeedback("Nenhum nome novo — cole uma lista ou confira duplicados.");
+    } else {
+      setImportFeedback(parts.join(" · "));
+    }
+  };
+
+  const handleImportReplace = (newPlayers: Player[]) => {
+    setPlayers(newPlayers);
+    setSelectedIds(newPlayers.map((p) => p.id));
+    setTeams([]);
+    setBenchPlayers([]);
+    setImportFeedback(
+      newPlayers.length
+        ? `Cadastro substituído: ${newPlayers.length} jogador(es) com ordem de lista ativa.`
+        : "Cadastro limpo — nenhum nome na colagem.",
+    );
   };
 
   const handleRemovePlayer = (id: string) => {
@@ -75,16 +105,11 @@ export function TeamSorter() {
     // Total de vagas disponíveis (times * jogadores por time)
     const totalSlots = numTeams * playersPerTeam;
     
-    // Embaralha os jogadores aleatoriamente primeiro (Fisher-Yates shuffle)
-    const shuffledPlayers = [...selectedPlayers];
-    for (let i = shuffledPlayers.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [shuffledPlayers[i], shuffledPlayers[j]] = [shuffledPlayers[j], shuffledPlayers[i]];
-    }
-    
-    // Separa jogadores que vão jogar e os que ficam no banco
-    const playersToDistribute = shuffledPlayers.slice(0, totalSlots);
-    const bench = shuffledPlayers.slice(totalSlots);
+    // Quem entra em campo vs banco: ordem da lista importada primeiro; sem prioridade, aleatório
+    const orderedForSlots = orderPlayersForSlotAllocation(selectedPlayers);
+
+    const playersToDistribute = orderedForSlots.slice(0, totalSlots);
+    const bench = orderedForSlots.slice(totalSlots);
     
     // Ordena por habilidade para distribuição equilibrada
     const sortedPlayers = [...playersToDistribute].sort((a, b) => b.skill - a.skill);
@@ -216,6 +241,17 @@ export function TeamSorter() {
                 </p>
               </CardHeader>
               <CardContent className="space-y-4">
+                <PlayerImport
+                  existingPlayers={players}
+                  defaultSkill={2}
+                  onImportMerge={handleImportMerge}
+                  onImportReplace={handleImportReplace}
+                />
+                {importFeedback && (
+                  <p className="text-sm text-muted-foreground rounded-md border border-border bg-secondary/50 px-3 py-2">
+                    {importFeedback}
+                  </p>
+                )}
                 <PlayerForm onAddPlayer={handleAddPlayer} />
                 <PlayerList
                   players={players}
@@ -283,7 +319,10 @@ export function TeamSorter() {
                   Selecionar Jogadores para o Sorteio
                 </CardTitle>
                 <p className="text-sm text-muted-foreground">
-                  Escolha quem vai participar desta pelada
+                  Escolha quem vai participar desta pelada. Se você importou uma lista do
+                  WhatsApp, quem está no topo da lista entra em campo antes quando houver
+                  banco; quem foi cadastrado só pelo formulário entra depois, em ordem
+                  aleatória entre si.
                 </p>
               </CardHeader>
               <CardContent>

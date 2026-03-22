@@ -1,6 +1,6 @@
 "use client";
 
-import { Star, Trash2, User, Check } from "lucide-react";
+import { Star, Trash2, User, Check, ListOrdered } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import type { Player } from "@/components/player-form";
@@ -96,7 +96,18 @@ export function PlayerList({
                   <User className="w-4 h-4 text-muted-foreground" />
                 </div>
                 <div>
-                  <p className="font-medium text-sm">{player.name}</p>
+                  <p className="font-medium text-sm flex items-center gap-1.5 flex-wrap">
+                    {player.name}
+                    {player.listPriority !== undefined && (
+                      <span
+                        className="inline-flex items-center gap-0.5 rounded bg-primary/15 px-1.5 py-0 text-[10px] font-normal text-primary"
+                        title="Ordem da lista importada (prioridade no sorteio)"
+                      >
+                        <ListOrdered className="h-3 w-3" />
+                        lista
+                      </span>
+                    )}
+                  </p>
                   <div className="flex gap-0.5">
                     {Array.from({ length: 3 }, (_, i) => (
                       <Star

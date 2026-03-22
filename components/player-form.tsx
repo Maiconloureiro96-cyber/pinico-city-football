@@ -11,6 +11,8 @@ export interface Player {
   id: string;
   name: string;
   skill: number;
+  /** Ordem na lista importada (menor = entra antes quando há banco). Opcional. */
+  listPriority?: number;
 }
 
 interface PlayerFormProps {
