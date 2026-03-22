@@ -130,7 +130,7 @@ export function TeamSorter() {
     return { teams: newTeams, bench };
   };
 
-  const handleShuffle = async () => {
+  const runSorteio = async () => {
     setIsShuffling(true);
     await new Promise((resolve) => setTimeout(resolve, 500));
     const result = balancedShuffle();
@@ -139,9 +139,13 @@ export function TeamSorter() {
     setIsShuffling(false);
   };
 
-  const handleReset = () => {
-    setTeams([]);
-    setBenchPlayers([]);
+  const handleShuffle = () => {
+    void runSorteio();
+  };
+
+  /** Novo sorteio = sortear de novo (times diferentes, ainda equilibrados) */
+  const handleNewDraw = () => {
+    void runSorteio();
   };
 
   const handleClearAll = () => {
@@ -352,12 +356,15 @@ export function TeamSorter() {
               {teams.length > 0 && (
                 <Button
                   variant="outline"
-                  onClick={handleReset}
+                  onClick={handleNewDraw}
+                  disabled={!canShuffle || isShuffling}
                   className="sm:w-auto h-12 bg-transparent"
                   size="lg"
                 >
-                  <RotateCcw className="w-5 h-5 mr-2" />
-                  Novo Sorteio
+                  <RotateCcw
+                    className={`w-5 h-5 mr-2 ${isShuffling ? "animate-spin" : ""}`}
+                  />
+                  {isShuffling ? "Reorganizando..." : "Novo Sorteio"}
                 </Button>
               )}
             </div>
