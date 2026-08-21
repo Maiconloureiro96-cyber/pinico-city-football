@@ -11,11 +11,13 @@ Aplicação web para montar **times equilibrados** nas peladas do grupo: cada jo
 - **Sorteio** com algoritmo que equilibra força entre os times e mostra totais por time.
 - **Timer de partida** na página inicial.
 - Dados salvos no **navegador** (localStorage).
+- **PWA**: pode instalar no celular/computador (ícone na tela inicial) e abrir em modo app, com cache básico para uso offline da shell.
 
 ## Tecnologias
 
 - [Next.js](https://nextjs.org/) (App Router, export estático)
 - React, TypeScript, Tailwind CSS
+- **PWA** (`app/manifest.ts` + service worker em `public/sw.js`)
 - Deploy: **GitHub Pages** via GitHub Actions
 
 ## Rodar localmente
@@ -47,6 +49,12 @@ A URL do site segue o padrão:
 `https://<usuario>.github.io/<nome-do-repositorio>/`
 
 O `basePath` é definido no build a partir do [configure-pages](https://github.com/actions/configure-pages) (`BASE_PATH`), para que assets e rotas funcionem na subpasta do Pages.
+
+## Instalar como app (PWA)
+
+1. Abra o site no **Chrome** / **Edge** (desktop) ou no Safari/Chrome (mobile).
+2. Use **Instalar aplicativo** / **Adicionar à tela de início**.
+3. O service worker só registra em **build de produção** (no Pages ou após `pnpm build` + servidor estático). Em `pnpm dev` o SW não é registrado de propósito.
 
 ## Licença
 
