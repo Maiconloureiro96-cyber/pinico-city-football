@@ -1,5 +1,5 @@
 /* Service worker do Pinico City FC — compatível com GitHub Pages (basePath). */
-const CACHE_NAME = "pinico-city-v1"
+const CACHE_NAME = "pinico-city-v2"
 
 function getBasePath() {
   // Ex.: /pinico-city-football/sw.js -> /pinico-city-football
@@ -17,11 +17,13 @@ self.addEventListener("install", (event) => {
   self.skipWaiting()
   const precache = [
     withBase("/"),
+    withBase("/index.html"),
     withBase("/manifest.webmanifest"),
     withBase("/logo-pinico-city.png"),
     withBase("/icon-192.png"),
     withBase("/icon-512.png"),
     withBase("/apple-icon.png"),
+    withBase("/apple-touch-icon.png"),
   ]
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) =>
@@ -68,7 +70,12 @@ self.addEventListener("fetch", (event) => {
         .catch(() =>
           caches
             .match(request)
-            .then((cached) => cached || caches.match(withBase("/"))),
+            .then(
+              (cached) =>
+                cached ||
+                caches.match(withBase("/")) ||
+                caches.match(withBase("/index.html")),
+            ),
         ),
     )
     return

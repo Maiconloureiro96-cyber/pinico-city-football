@@ -17,9 +17,19 @@ export function PwaRegister() {
     const swUrl = `${base}/sw.js`
     const scope = `${base}/`
 
-    navigator.serviceWorker.register(swUrl, { scope }).catch((err) => {
-      console.warn("[PWA] Falha ao registrar service worker:", err)
-    })
+    const register = () => {
+      navigator.serviceWorker.register(swUrl, { scope }).catch((err) => {
+        console.warn("[PWA] Falha ao registrar service worker:", err)
+      })
+    }
+
+    if (document.readyState === "complete") {
+      register()
+      return
+    }
+
+    window.addEventListener("load", register)
+    return () => window.removeEventListener("load", register)
   }, [])
 
   return null

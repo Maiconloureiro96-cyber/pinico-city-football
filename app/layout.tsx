@@ -25,6 +25,10 @@ export const metadata: Metadata = {
   formatDetection: {
     telephone: false,
   },
+  // Next 16 emite só mobile-web-app-capable; o Safari ainda usa o prefixo apple-.
+  other: {
+    "apple-mobile-web-app-capable": "yes",
+  },
   icons: {
     icon: [
       {
@@ -50,7 +54,18 @@ export const metadata: Metadata = {
         type: "image/png",
       },
     ],
-    apple: `${base}/apple-icon.png`,
+    apple: [
+      {
+        url: `${base}/apple-icon.png`,
+        sizes: "180x180",
+        type: "image/png",
+      },
+      {
+        url: `${base}/apple-touch-icon.png`,
+        sizes: "180x180",
+        type: "image/png",
+      },
+    ],
   },
 }
 
@@ -61,6 +76,7 @@ export const viewport: Viewport = {
   initialScale: 1,
   maximumScale: 5,
   userScalable: true,
+  viewportFit: "cover",
 }
 
 export default function RootLayout({

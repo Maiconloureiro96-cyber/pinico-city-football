@@ -31,9 +31,11 @@ export default function manifest(): MetadataRoute.Manifest {
     start_url: root,
     scope: root,
     display: "standalone",
+    display_override: ["standalone", "minimal-ui"],
     orientation: "portrait-primary",
     background_color: "#1a2744",
     theme_color: "#1a2744",
+    prefer_related_applications: false,
     lang: "pt-BR",
     categories: ["sports", "utilities"],
     icons: [
