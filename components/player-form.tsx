@@ -14,6 +14,8 @@ export interface Player {
   skill: number;
   /** Ordem na lista importada (menor = entra antes quando há banco). Opcional. */
   listPriority?: number;
+  /** Goleiro: o sorteio coloca 1 por time. */
+  goalkeeper?: boolean;
 }
 
 interface PlayerFormProps {

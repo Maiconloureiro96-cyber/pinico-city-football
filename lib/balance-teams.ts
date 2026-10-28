@@ -1,6 +1,6 @@
 import type { Player } from "@/components/player-form"
 
-function shuffleArray<T>(arr: T[]): T[] {
+export function shuffleArray<T>(arr: T[]): T[] {
   const out = [...arr]
   for (let i = out.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1))
@@ -41,17 +41,22 @@ export function orderPlayersBySkillWithShuffledTies(players: Player[]): Player[]
  */
 export function distributeBalancedTeams(
   players: Player[],
-  numTeams: number,
-  playersPerTeam: number,
+  caps: number[],
+  initial: Player[][] = [],
 ): Player[][] {
+  const numTeams = caps.length
   const sortedPlayers = orderPlayersBySkillWithShuffledTies(players)
-  const newTeams: Player[][] = Array.from({ length: numTeams }, () => [])
-  const teamSkills: number[] = Array(numTeams).fill(0)
+  const newTeams: Player[][] = Array.from({ length: numTeams }, (_, i) => [
+    ...(initial[i] ?? []),
+  ])
+  const teamSkills: number[] = newTeams.map((t) =>
+    t.reduce((sum, p) => sum + p.skill, 0),
+  )
 
   for (const player of sortedPlayers) {
     let minRoster = Infinity
     for (let i = 0; i < numTeams; i++) {
-      if (newTeams[i].length < playersPerTeam) {
+      if (newTeams[i].length < caps[i]) {
         minRoster = Math.min(minRoster, newTeams[i].length)
       }
     }
@@ -59,7 +64,7 @@ export function distributeBalancedTeams(
     let bestSum = Infinity
     const candidates: number[] = []
     for (let i = 0; i < numTeams; i++) {
-      if (newTeams[i].length >= playersPerTeam) continue
+      if (newTeams[i].length >= caps[i]) continue
       if (newTeams[i].length !== minRoster) continue
       const s = teamSkills[i]
       if (s < bestSum) {
@@ -71,12 +76,49 @@ export function distributeBalancedTeams(
       }
     }
 
+    if (candidates.length === 0) break
     const targetTeamIndex =
-      candidates[Math.floor(Math.random() * candidates.length)] ?? 0
+      candidates[Math.floor(Math.random() * candidates.length)]
 
     newTeams[targetTeamIndex].push(player)
     teamSkills[targetTeamIndex] += player.skill
   }
 
   return newTeams
+}
+
+/**
+ * Vagas por time. Sem goleiros: `playersPerTeam` para todos. Com goleiros, os primeiros
+ * times têm goleiro próprio (ocupa a vaga) e os demais reaproveitam um que já está
+ * jogando, então só preenchem `playersPerTeam - 1` vagas de linha.
+ */
+export function teamCaps(numTeams: number, playersPerTeam: number, gkCount: number): number[] {
+  const owned = Math.min(gkCount, numTeams)
+  return Array.from({ length: numTeams }, (_, i) =>
+    gkCount === 0 || i < owned ? playersPerTeam : Math.max(0, playersPerTeam - 1),
+  )
+}
+
+/** Sorteia com goleiros: um por time enquanto houver; times que sobram reaproveitam os que já jogam. */
+export function drawWithGoalkeepers(
+  ordered: Player[],
+  numTeams: number,
+  playersPerTeam: number,
+): { teams: Player[][]; bench: Player[]; borrowed: (Player | null)[] } {
+  const gks = ordered.filter((p) => p.goalkeeper)
+  const owned = Math.min(gks.length, numTeams)
+  const keepers = shuffleArray(gks.slice(0, owned))
+  const caps = teamCaps(numTeams, playersPerTeam, gks.length)
+  const keeperIds = new Set(keepers.map((k) => k.id))
+  // goleiros excedentes jogam na linha
+  const pool = ordered.filter((p) => !keeperIds.has(p.id))
+  const fieldSlots = caps.reduce((a, b) => a + b, 0) - owned
+
+  const teams = distributeBalancedTeams(
+    pool.slice(0, fieldSlots),
+    caps,
+    keepers.map((k) => [k]),
+  )
+  const borrowed = teams.map((_, i) => (owned > 0 && i >= owned ? keepers[i % owned] : null))
+  return { teams, bench: pool.slice(fieldSlots), borrowed }
 }

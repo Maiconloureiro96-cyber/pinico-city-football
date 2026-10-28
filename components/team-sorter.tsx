@@ -7,13 +7,14 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PlayerForm, type Player } from "@/components/player-form";
 import { PlayerImport, type ImportResult } from "@/components/player-import";
 import { PlayerList } from "@/components/player-list";
-import { distributeBalancedTeams } from "@/lib/balance-teams";
+import { distributeBalancedTeams, drawWithGoalkeepers, teamCaps } from "@/lib/balance-teams";
 import { orderPlayersForSlotAllocation } from "@/lib/draw-order";
 import { normalizeSkill } from "@/lib/player-skill";
 import { TeamConfig } from "@/components/team-config";
 import { TeamCard } from "@/components/team-card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { SkillStars } from "@/components/skill-stars";
+import { PwaInstallHint } from "@/components/pwa-install-hint";
 
 const STORAGE_KEY = "pinico-city-players";
 /** Mesmo basePath do next.config (GitHub Pages em subpasta ou raiz) — exposto via env no build */
@@ -25,6 +26,7 @@ export function TeamSorter() {
   const [numTeams, setNumTeams] = useState(2);
   const [playersPerTeam, setPlayersPerTeam] = useState(5);
   const [teams, setTeams] = useState<Player[][]>([]);
+  const [borrowed, setBorrowed] = useState<(Player | null)[]>([]);
   const [benchPlayers, setBenchPlayers] = useState<Player[]>([]);
   const [isShuffling, setIsShuffling] = useState(false);
   const [activeTab, setActiveTab] = useState("cadastro");
@@ -95,6 +97,12 @@ export function TeamSorter() {
     setTeams([]);
   };
 
+  const handleToggleGoalkeeper = (id: string) => {
+    setPlayers((prev) =>
+      prev.map((p) => (p.id === id ? { ...p, goalkeeper: !p.goalkeeper } : p)),
+    );
+  };
+
   const handleToggleSelect = (id: string) => {
     setSelectedIds((prev) =>
       prev.includes(id) ? prev.filter((pid) => pid !== id) : [...prev, id]
@@ -112,22 +120,22 @@ export function TeamSorter() {
   const balancedShuffle = () => {
     const selectedPlayers = players.filter((p) => selectedIds.includes(p.id));
     
-    // Total de vagas disponíveis (times * jogadores por time)
-    const totalSlots = numTeams * playersPerTeam;
-    
     // Quem entra em campo vs banco: ordem da lista importada primeiro; sem prioridade, aleatório
-    const orderedForSlots = orderPlayersForSlotAllocation(selectedPlayers);
+    const ordered = orderPlayersForSlotAllocation(selectedPlayers);
 
-    const playersToDistribute = orderedForSlots.slice(0, totalSlots);
-    const bench = orderedForSlots.slice(totalSlots);
+    if (ordered.some((p) => p.goalkeeper)) {
+      return drawWithGoalkeepers(ordered, numTeams, playersPerTeam);
+    }
 
-    const newTeams = distributeBalancedTeams(
-      playersToDistribute,
-      numTeams,
-      playersPerTeam,
-    );
-
-    return { teams: newTeams, bench };
+    const totalSlots = numTeams * playersPerTeam;
+    return {
+      teams: distributeBalancedTeams(
+        ordered.slice(0, totalSlots),
+        teamCaps(numTeams, playersPerTeam, 0),
+      ),
+      bench: ordered.slice(totalSlots),
+      borrowed: [] as (Player | null)[],
+    };
   };
 
   const runSorteio = async () => {
@@ -136,6 +144,7 @@ export function TeamSorter() {
     const result = balancedShuffle();
     setTeams(result.teams);
     setBenchPlayers(result.bench);
+    setBorrowed(result.borrowed);
     setIsShuffling(false);
   };
 
@@ -155,7 +164,8 @@ export function TeamSorter() {
     setBenchPlayers([]);
   };
 
-  const totalSlots = numTeams * playersPerTeam;
+  const gkCount = players.filter((p) => p.goalkeeper && selectedIds.includes(p.id)).length;
+  const totalSlots = teamCaps(numTeams, playersPerTeam, gkCount).reduce((a, b) => a + b, 0);
   const canShuffle = selectedIds.length >= numTeams; // Mínimo 1 jogador por time
   
   // Calcula quantos jogadores vão jogar e quantos ficam de fora
@@ -188,6 +198,7 @@ export function TeamSorter() {
             <p className="text-sm text-muted-foreground mt-1">
               Sorteio de Times Equilibrados
             </p>
+            <PwaInstallHint />
           </div>
         </div>
       </header>
@@ -246,6 +257,7 @@ export function TeamSorter() {
                   players={players}
                   selectedIds={[]}
                   onRemovePlayer={handleRemovePlayer}
+                  onToggleGoalkeeper={handleToggleGoalkeeper}
                   onToggleSelect={() => {}}
                   onSelectAll={() => {}}
                   onDeselectAll={() => {}}
@@ -333,6 +345,7 @@ export function TeamSorter() {
                     players={players}
                     selectedIds={selectedIds}
                     onRemovePlayer={handleRemovePlayer}
+                  onToggleGoalkeeper={handleToggleGoalkeeper}
                     onToggleSelect={handleToggleSelect}
                     onSelectAll={handleSelectAll}
                     onDeselectAll={handleDeselectAll}
@@ -395,6 +408,7 @@ export function TeamSorter() {
                       teamNumber={index + 1}
                       players={teamPlayers}
                       color=""
+                      borrowedKeeper={borrowed[index]}
                     />
                   ))}
                 </div>

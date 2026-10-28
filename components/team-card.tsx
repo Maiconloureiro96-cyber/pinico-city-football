@@ -11,6 +11,8 @@ interface TeamCardProps {
   teamNumber: number;
   players: Player[];
   color: string;
+  /** Goleiro de outro time que também defende este. */
+  borrowedKeeper?: Player | null;
 }
 
 const teamColors = [
@@ -35,7 +37,7 @@ const teamTextColors = [
   "text-orange-400",
 ];
 
-export function TeamCard({ teamNumber, players, color }: TeamCardProps) {
+export function TeamCard({ teamNumber, players, color, borrowedKeeper }: TeamCardProps) {
   const totalSkill = players.reduce((sum, p) => sum + p.skill, 0);
   const avgSkill = players.length > 0 ? totalSkill / players.length : 0;
   const avgStarsDisplay = Math.min(
@@ -85,11 +87,17 @@ export function TeamCard({ teamNumber, players, color }: TeamCardProps) {
                     {index + 1}.
                   </span>
                   {player.name}
+                  {player.goalkeeper && <span className="text-[10px] text-amber-400">GOL</span>}
                 </span>
                 <SkillStars value={player.skill} />
               </li>
             ))}
           </ul>
+        )}
+        {borrowedKeeper && (
+          <p className="mt-2 text-xs text-amber-400">
+            Goleiro: {borrowedKeeper.name} (emprestado)
+          </p>
         )}
       </CardContent>
     </Card>

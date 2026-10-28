@@ -1,6 +1,6 @@
 "use client";
 
-import { Trash2, User, Check, ListOrdered } from "lucide-react";
+import { Trash2, User, Check, ListOrdered, Hand } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import type { Player } from "@/components/player-form";
@@ -11,6 +11,7 @@ interface PlayerListProps {
   players: Player[];
   selectedIds: string[];
   onRemovePlayer: (id: string) => void;
+  onToggleGoalkeeper: (id: string) => void;
   onToggleSelect: (id: string) => void;
   onSelectAll: () => void;
   onDeselectAll: () => void;
@@ -21,6 +22,7 @@ export function PlayerList({
   players,
   selectedIds,
   onRemovePlayer,
+  onToggleGoalkeeper,
   onToggleSelect,
   onSelectAll,
   onDeselectAll,
@@ -112,6 +114,23 @@ export function PlayerList({
                   <SkillStars value={player.skill} />
                 </div>
               </div>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onToggleGoalkeeper(player.id);
+                }}
+                className={cn(
+                  "h-8 w-8",
+                  player.goalkeeper ? "text-amber-400" : "opacity-40 hover:opacity-100",
+                )}
+                aria-label={`${player.goalkeeper ? "Desmarcar" : "Marcar"} ${player.name} como goleiro`}
+                aria-pressed={!!player.goalkeeper}
+                title="Goleiro"
+              >
+                <Hand className="w-4 h-4" />
+              </Button>
               {!selectionMode && (
                 <Button
                   variant="ghost"
